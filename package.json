@@ -5,7 +5,7 @@
   "main": "metropole.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "adk api_server metropole.ts -p 7004"
+    "start": "adk api_server dermattive.ts -p 7004"
   },
   "repository": {
     "type": "git",
