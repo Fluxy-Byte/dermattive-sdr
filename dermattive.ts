@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { promptActive, promptHelp, promptRoot, promptSalesClose, promptSalesOpen } from './prompt';
+import { promptActive, promptHelp, promptRoot, promptSalesClose, promptSalesOpen, promptReceptor } from './prompt';
 import { FunctionTool, LlmAgent } from '@google/adk';
 import { getProductsApi } from "./src/services/tools/getProducts"
 import { z } from 'zod';
@@ -213,6 +213,19 @@ export const support = new LlmAgent({
 });
 
 /* ======================================================
+   AGENTE 5: Clientes receptivos
+   - Indetifica intenções dos clientes que ja tiveram contato
+   e direciona para o local definido
+====================================================== */
+export const receptor = new LlmAgent({
+  name: 'receptor',
+  model: 'gemini-2.5-flash',
+  instruction: promptReceptor,
+  tools: [coletarProdutos]
+});
+
+
+/* ======================================================
    ORQUESTRADOR: Root Manager
    - Lê o histórico a cada mensagem
    - Roteia para o sub-agente correto
@@ -229,7 +242,7 @@ export const rootAgent = new LlmAgent({
   name: 'root_manager',
   model: 'gemini-2.5-flash',
   instruction: promptRoot,
-  subAgents: [activator, salesOpen, salesClosed, support]
+  subAgents: [activator, salesOpen, salesClosed, support, receptor]
   // ↑ Sem tools aqui — root só orquestra, não executa
 });
 
