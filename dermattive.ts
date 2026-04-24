@@ -106,116 +106,6 @@ export const registerLead = new FunctionTool({
   }
 });
 
-
-export const registerNameLead = new FunctionTool({
-  name: 'register_name_lead',
-  description: 'Registra o nome capturado do lead para o time comercial',
-
-  parameters: z.object({
-    nome: z.string().min(2, 'Nome inválido')
-  }),
-
-  execute: async (params, toolContext: SessionContext) => {
-    try {
-      const {
-        nome
-      } = params;
-
-      const session = toolContext?.invocationContext?.session;
-
-      const telefoneLead = session?.id ?? JSON.stringify(session);
-
-      /* ===============================
-         LOG ESTRUTURADO
-      =============================== */
-
-      console.log('[Atualizado nome do Lead]', {
-        nome
-      });
-
-      /* ===============================
-         PAYLOAD
-      =============================== */
-
-      const metaDados = {
-        display_phone_number: "553491713923",
-        phone_number_id: "872884792582393"
-      }
-
-      return {
-        status: 'success',
-        message:
-          `Contato atualizado com sucesso. O nome do lead é ${nome}.`
-      };
-      // await enviarDadosDaAtualizacaoDeNome(telefoneLead, nome, metaDados);
-
-    } catch (err) {
-      console.error('[REGISTER ERROR]', err);
-
-      return {
-        status: 'error',
-        message:
-          'Falha ao registrar nome do lead. Tente novamente.'
-      };
-    }
-  }
-});
-
-
-export const errorLead = new FunctionTool({
-  name: 'error_lead',
-  description: 'Registra problemas técnicos do cliente',
-
-  parameters: z.object({
-    nome: z.string().min(2),
-    motivo: z.string().min(5),
-  }),
-
-  execute: async (params, toolContext: SessionContext) => {
-    try {
-      const { nome, motivo } = params;
-
-      const session = toolContext?.invocationContext?.session
-
-      const telefoneLead = session?.id ?? JSON.stringify(session);
-
-      const dados = {
-        nome,
-        motivo,
-        telefone: telefoneLead,
-        nomeAgente:
-          process.env.NOME_AGENTE_SUPORTE ?? 'Suporte Cardoso',
-
-        telefoneAgente:
-          process.env.NUMBER_SUPORTE ?? '5534997801829'
-      };
-
-      const metaDados = {
-        display_phone_number: "553491713923",
-        phone_number_id: "872884792582393"
-      }
-
-      // await enviarDadosDoRegistroDeLead(telefoneLead, nome, metaDados, motivo);
-
-      return {
-        status: 'success',
-        message:
-          `Obrigado, ${nome}. Nosso suporte já recebeu sua solicitação.`
-      };
-
-    } catch (err) {
-      console.error('[SUPPORT ERROR]', err);
-
-      return {
-        status: 'error',
-        message:
-          'Erro ao registrar suporte.'
-      };
-    }
-  }
-});
-
-
 export const coletarProdutos = new FunctionTool({
   name: 'get_products_lead',
   description: 'Coleta produtos para o lead',
@@ -271,56 +161,78 @@ export const getDataLead = new FunctionTool({
 })
 
 
-
 /* ======================================================
-   AGENTE 1: Inicia a venda
+   AGENTE 1: Ativa o interesse no cliente
+   - Recebe clientes sem histórico (resposta ao template)
+   - Apresenta a Derm'Attive e desperta interesse
+   - Transfere para salesClosed se houver sinal positivo
 ====================================================== */
-export const salesOpen = new LlmAgent({
-  name: 'vendas_metropole',
-  model: 'gemini-2.5-flash', // Recomendo usar o 1.5 ou 2.0
-  instruction: promptSalesOpen,
-  tools: [coletarProdutos]
-});
-
-/* ======================================================
-   AGENTE 2: Fecha a venda
-====================================================== */
-export const salesClosed = new LlmAgent({
-  name: 'suporte_metropole',
-  model: 'gemini-2.5-flash',
-  instruction: promptSalesClose,
-  tools: [coletarProdutos]
-});
-
-/* ======================================================
-   AGENTE 3: Ajuda cliente com duvidas
-====================================================== */
-export const support = new LlmAgent({
-  name: 'suporte_metropole',
-  model: 'gemini-2.5-flash',
-  instruction: promptHelp,
-  tools: [coletarProdutos]
-});
-
-/* ======================================================
-   AGENTE 4: Ativa o interesse no cliente
-====================================================== */
-export const active = new LlmAgent({
-  name: 'suporte_metropole',
+export const activator = new LlmAgent({
+  name: 'communication_activator',
   model: 'gemini-2.5-flash',
   instruction: promptActive,
   tools: [coletarProdutos]
 });
 
 /* ======================================================
-   AGENTE 3: ORQUESTRADOR (O Roteador)
+   AGENTE 2: Inicia a venda (clientes receptivos)
+   - Clientes que já conhecem a marca e querem comprar
+   - Identifica se o cliente sabe o que quer ou não
+   - Transfere para salesClosed com a lista de interesse
+====================================================== */
+export const salesOpen = new LlmAgent({
+  name: 'opening_salesperson',
+  model: 'gemini-2.5-flash',
+  instruction: promptSalesOpen,
+  tools: [coletarProdutos]
+});
+
+/* ======================================================
+   AGENTE 3: Fecha a venda
+   - Recebe de activator (primeiro pedido c/ 10% desconto)
+   - Recebe de salesOpen (pedido recorrente)
+   - Monta lista e passa ao Wellington para pagamento
+====================================================== */
+export const salesClosed = new LlmAgent({
+  name: 'closing_sales',
+  model: 'gemini-2.5-flash',
+  instruction: promptSalesClose,
+  tools: [coletarProdutos]
+});
+
+/* ======================================================
+   AGENTE 4: Suporte pós-venda
+   - Resolve dúvidas de uso via get_products_info
+   - Encaminha reclamações ao Wellington com contexto
+====================================================== */
+export const support = new LlmAgent({
+  name: 'support',
+  model: 'gemini-2.5-flash',
+  instruction: promptHelp,
+  tools: [coletarProdutos]
+});
+
+/* ======================================================
+   ORQUESTRADOR: Root Manager
+   - Lê o histórico a cada mensagem
+   - Roteia para o sub-agente correto
+   - NUNCA fala diretamente com o cliente
+   
+   ATENÇÃO: O rootAgent NÃO precisa da tool coletarProdutos
+   pois ele apenas roteia — quem busca produtos são os sub-agentes.
+   
+   ORDEM dos subAgents importa: o ADK tenta na sequência
+   declarada em caso de ambiguidade. Deixe activator primeiro
+   pois é o fluxo mais frequente (prospecção ativa).
 ====================================================== */
 export const rootAgent = new LlmAgent({
-  name: 'orquestrador_metropole',
+  name: 'root_manager',
   model: 'gemini-2.5-flash',
   instruction: promptRoot,
-  subAgents: [salesOpen, salesClosed, support, active]
+  subAgents: [activator, salesOpen, salesClosed, support]
+  // ↑ Sem tools aqui — root só orquestra, não executa
 });
+
 
 /* ======================================================
    START COMMANDS
