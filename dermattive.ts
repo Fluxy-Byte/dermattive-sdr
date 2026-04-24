@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { promptSales, promptHelp, promptRoot } from './prompt';
+import { promptActive, promptHelp, promptRoot, promptSalesClose, promptSalesOpen } from './prompt';
 import { FunctionTool, LlmAgent } from '@google/adk';
 import { getProductsApi } from "./src/services/tools/getProducts"
 import { z } from 'zod';
@@ -273,22 +273,42 @@ export const getDataLead = new FunctionTool({
 
 
 /* ======================================================
-   AGENTE 1: VENDAS (Bento)
+   AGENTE 1: Inicia a venda
 ====================================================== */
-export const salesAgent = new LlmAgent({
+export const salesOpen = new LlmAgent({
   name: 'vendas_metropole',
   model: 'gemini-2.5-flash', // Recomendo usar o 1.5 ou 2.0
-  instruction: promptSales,
+  instruction: promptSalesOpen,
   tools: [coletarProdutos]
 });
 
 /* ======================================================
-   AGENTE 2: PÓS-VENDA (Suporte/Financeiro)
+   AGENTE 2: Fecha a venda
 ====================================================== */
-export const supportAgent = new LlmAgent({
+export const salesClosed = new LlmAgent({
+  name: 'suporte_metropole',
+  model: 'gemini-2.5-flash',
+  instruction: promptSalesClose,
+  tools: [coletarProdutos]
+});
+
+/* ======================================================
+   AGENTE 3: Ajuda cliente com duvidas
+====================================================== */
+export const support = new LlmAgent({
   name: 'suporte_metropole',
   model: 'gemini-2.5-flash',
   instruction: promptHelp,
+  tools: [coletarProdutos]
+});
+
+/* ======================================================
+   AGENTE 4: Ativa o interesse no cliente
+====================================================== */
+export const active = new LlmAgent({
+  name: 'suporte_metropole',
+  model: 'gemini-2.5-flash',
+  instruction: promptActive,
   tools: [coletarProdutos]
 });
 
@@ -299,7 +319,7 @@ export const rootAgent = new LlmAgent({
   name: 'orquestrador_metropole',
   model: 'gemini-2.5-flash',
   instruction: promptRoot,
-  subAgents: [salesAgent, supportAgent]
+  subAgents: [salesOpen, salesClosed, support, active]
 });
 
 /* ======================================================
