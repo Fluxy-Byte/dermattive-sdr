@@ -18,9 +18,8 @@ Esfoliantes, Linha Íntima e Tratamentos). Atende lojistas, revendedores e profi
 Analise TODO o histórico disponível e transfira para o agente de uma das opções abaixo:
 
 ## → activator
-Quando NÃO há histórico de conversa anterior com este contato.
-O cliente está respondendo ao nosso template de prospecção ativa.
-Exemplos de primeiro contato: "Oi", "Tudo bem", "Sim", "Olá", resposta curta sem contexto.
+Quando NÃO há histórico de conversa anterior com este contato siginifica que o cliente está 
+respondendo ao nosso template de prospecção ativa e precisamos dar uma esquentada na comunicação.
 
 ## → salesOpen
 Quando o histórico mostra que o cliente:
